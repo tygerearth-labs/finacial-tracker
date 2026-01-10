@@ -1,0 +1,116 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Profil {
+  id          String   @id @default(cuid())
+  nama        String   @unique
+  deskripsi   String?
+  isActive    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  kategoriPemasukan   KategoriPemasukan[]
+  kategoriPengeluaran KategoriPengeluaran[]
+  transaksi           Transaksi[]
+  targetTabungan      TargetTabungan[]
+  alokasiTabungan     AlokasiTabungan[]
+}
+
+model KategoriPemasukan {
+  id          String   @id @default(cuid())
+  nama        String
+  deskripsi   String?
+  warna       String?  @default("#10b981")
+  profilId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  profil     Profil      @relation(fields: [profilId], references: [id], onDelete: Cascade)
+  transaksi  Transaksi[]
+
+  @@unique([profilId, nama])
+}
+
+model KategoriPengeluaran {
+  id          String   @id @default(cuid())
+  nama        String
+  deskripsi   String?
+  warna       String?  @default("#ef4444")
+  profilId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  profil     Profil      @relation(fields: [profilId], references: [id], onDelete: Cascade)
+  transaksi  Transaksi[]
+
+  @@unique([profilId, nama])
+}
+
+model Transaksi {
+  id                    String   @id @default(cuid())
+  jenis                 String   // "MASUK" atau "KELUAR"
+  nominal               Float
+  deskripsi             String?
+  tanggal               DateTime
+  kategoriPemasukanId   String?
+  kategoriPengeluaranId String?
+  profilId              String
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  // Relations
+  profil              Profil               @relation(fields: [profilId], references: [id], onDelete: Cascade)
+  kategoriPemasukan   KategoriPemasukan?   @relation(fields: [kategoriPemasukanId], references: [id], onDelete: SetNull)
+  kategoriPengeluaran KategoriPengeluaran? @relation(fields: [kategoriPengeluaranId], references: [id], onDelete: SetNull)
+  alokasiTabungan     AlokasiTabungan[]
+}
+
+model TargetTabungan {
+  id          String   @id @default(cuid())
+  nama        String
+  deskripsi   String?
+  target      Float
+  tercapai    Float    @default(0)
+  tanggalMulai DateTime
+  tanggalTarget DateTime
+  alokasiPersen Float  @default(0) // persentase alokasi dari kas masuk
+  isActive    Boolean  @default(true)
+  profilId    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  profil          Profil           @relation(fields: [profilId], references: [id], onDelete: Cascade)
+  alokasiTabungan AlokasiTabungan[]
+
+  @@unique([profilId, nama])
+}
+
+model AlokasiTabungan {
+  id              String   @id @default(cuid())
+  nominal         Float
+  transaksiId     String
+  targetTabunganId String
+  profilId        String
+  createdAt       DateTime @default(now())
+  
+  // Relations
+  transaksi     Transaksi     @relation(fields: [transaksiId], references: [id], onDelete: Cascade)
+  targetTabungan TargetTabungan @relation(fields: [targetTabunganId], references: [id], onDelete: Cascade)
+  profil        Profil        @relation(fields: [profilId], references: [id], onDelete: Cascade)
+}
